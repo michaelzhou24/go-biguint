@@ -4,6 +4,7 @@ package biguint
 
 import (
 	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -77,26 +78,42 @@ func TestString(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
+
 	type Test struct {
-		input    uint64
-		expected string
+		input []uint8
 	}
+
 	tests := []Test{
-		{0x12345678_87654321, "0x12345678_87654321"},
-		{0xf, "0xf"},
-		{0x100, "0x100"},
-		{0x1, "0x1"},
-		{0x0, "0x0"},
-		{0x1_12345678, "0x1_12345678"},
-		{0x12_12345678, "0x12_12345678"},
-		{0x123_12345678, "0x123_12345678"},
-		{0x1234_12345678, "0x1234_12345678"},
+		{[]uint8{0xff}},
+		{[]uint8{0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff}},
+		{[]uint8{0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff}},
+		{[]uint8{0x21, 0x43, 0x65, 0x87, 0x78, 0x56, 0x34, 0x12}},
 	}
+
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("0x%x", test.input), func(t *testing.T) {
-			result := NewBigUInt(test.input).Copy().String()
-			if test.expected != result {
-				t.Fatalf("%s, does not equal expected value %s", result, test.expected)
+			var source BigUInt
+			source.data = test.input
+			dest := source.Copy()
+
+			if len(dest.data) != len(source.data) {
+				t.Fatalf("Copy Failed, copied bytes: %d; Expected: %d ", len(dest.data), len(source.data))
+			}
+
+			if source.String() != dest.String() {
+				t.Fatalf("%s, does not equal expected value %s", dest.String(), source.String())
+			}
+
+			/*
+			* Check if both piont to the same slice object
+			* Now modify dest, and check if source and dest still match
+			 */
+			rindex := rand.Intn(len(dest.data))
+			dest.data[rindex]++
+
+			if source.data[rindex] == dest.data[rindex] {
+
+				t.Fatal("Both Source and Destination point to the same object")
 			}
 		})
 	}
