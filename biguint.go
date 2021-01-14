@@ -48,7 +48,6 @@ func NewBigUInt(i uint64) *BigUInt {
 //
 // Increases x by the number represented by y, returning x.
 // Note that x's slice's size may increase as a result of this operation.
-// TODO
 func (x *BigUInt) Add(y *BigUInt) *BigUInt {
 	var carry uint16
 	var result uint16
@@ -94,7 +93,65 @@ func (x *BigUInt) Add(y *BigUInt) *BigUInt {
 // x should be unchanged.
 // TODO
 func (x *BigUInt) Subtract(y *BigUInt) (*BigUInt, error) {
-	return nil, errors.New("not implemented")
+	// if y arr > x arr, y > x
+	if len(x.data) < len(y.data) {
+		return nil, ErrUnderflow
+	}
+
+	// if equal size, check which one is bigger
+	if len(x.data) == len(y.data) {
+		for i := len(x.data) - 1; i >= 0; i-- {
+			if x.data[i] < y.data[i] {
+				return nil, ErrUnderflow
+			} else if x.data[i] > y.data[i] {
+				break
+			}
+		}
+	}
+
+	ret := x.Copy()
+	borrow := false
+	i := 0
+	for ; i < len(x.data); i++ {
+		var result uint8
+		if i >= len(y.data) {
+			if borrow {
+				borrow = false
+				if x.data[i] == 0 {
+					borrow = true
+				}
+				result = x.data[i] - uint8(1)
+			} else {
+				result = x.data[i]
+			}
+		} else {
+			if borrow {
+				if x.data[i] == 0 {
+					x.data[i] = 0xff
+				} else {
+					x.data[i]--
+					borrow = false
+				}
+			}
+			result = x.data[i] - y.data[i]
+			if x.data[i] < y.data[i] {
+				borrow = true
+			}
+		}
+		ret.data[i] = result
+	}
+	// trim zeroes
+	i = len(x.data)-1
+	zeroCount := 0
+	for ;i >= 0; i-- {
+		if ret.data[i] == 0 {
+			zeroCount++
+		} else {
+			break
+		}
+	}
+	ret.data = ret.data[zeroCount:]
+	return ret, nil
 }
 
 // Bytes provides access to the raw bytes underlying a given BigUInt
